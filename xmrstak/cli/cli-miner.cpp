@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
 	/* For Windows 7 and 8 request elevation at all times unless we are using slow memory */
-	if(jconf::inst()->GetSlowMemSetting() != jconf::slow_mem_cfg::always_use && LOBYTE(LOWORD(GetVersion())) < 10)
+	if(jconf::inst()->GetSlowMemSetting() != jconf::slow_mem_cfg::always_use && !IsWindows10OrNewer())
 		RequestElevation();
 #endif
 
