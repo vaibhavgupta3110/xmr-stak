@@ -399,7 +399,7 @@ static const __constant uchar rcon[8] = { 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x
 void AESExpandKey256(uint *keybuf)
 {
 	//#pragma unroll 4
-	for(uint c = 8, i = 1; c < 60; ++c)
+	for(uint c = 8, i = 1; c < 40; ++c)
 	{
 		// For 256-bit keys, an sbox permutation is done every other 4th uint generated, AND every 8th
 		uint t = ((!(c & 7)) || ((c & 7) == 4)) ? SubWord(keybuf[c - 1]) : keybuf[c - 1];
@@ -411,21 +411,32 @@ void AESExpandKey256(uint *keybuf)
 	}
 }
 
+#define MEM_CHUNK (1<<4)
+
 #if(STRIDED_INDEX==0)
 #   define IDX(x)	(x)
-#else
+#elif(STRIDED_INDEX==1)
 #   define IDX(x)	((x) * (Threads))
+#elif(STRIDED_INDEX==2)
+#   define IDX(x)	(((x) % MEM_CHUNK) + ((x) / MEM_CHUNK) * WORKSIZE * MEM_CHUNK)
 #endif
+
+inline ulong getIdx()
+{
+#if(STRIDED_INDEX==0 || STRIDED_INDEX==1 || STRIDED_INDEX==2)
+	return get_global_id(0) - get_global_offset(0);
+#endif
+}
 
 __attribute__((reqd_work_group_size(WORKSIZE, 8, 1)))
 __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ulong *states, ulong Threads)
 {
 	ulong State[25];
-	uint ExpandedKey1[256];
+	uint ExpandedKey1[40];
 	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
 	uint4 text;
 
-	const ulong gIdx = get_global_id(0) - get_global_offset(0);
+	const ulong gIdx = getIdx();
 
 	for(int i = get_local_id(1) * WORKSIZE + get_local_id(0);
 		i < 256;
@@ -439,7 +450,7 @@ __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ul
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
-
+		
 	// do not use early return here
 	if(gIdx < Threads)
 	{
@@ -447,8 +458,10 @@ __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ul
 
 #if(STRIDED_INDEX==0)
 		Scratchpad += gIdx * (ITERATIONS >> 2);
-#else
+#elif(STRIDED_INDEX==1)
 		Scratchpad += gIdx;
+#elif(STRIDED_INDEX==2)
+		Scratchpad += get_group_id(0) * (ITERATIONS >> 2) * WORKSIZE + MEM_CHUNK * get_local_id(0);
 #endif
 
 		((ulong8 *)State)[0] = vload8(0, input);
@@ -509,7 +522,7 @@ __kernel void cn1(__global uint4 *Scratchpad, __global ulong *states, ulong Thre
 	ulong a[2], b[2];
 	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
 
-	const ulong gIdx = get_global_id(0) - get_global_offset(0);
+	const ulong gIdx = getIdx();
 
 	for(int i = get_local_id(0); i < 256; i += WORKSIZE)
 	{
@@ -523,15 +536,17 @@ __kernel void cn1(__global uint4 *Scratchpad, __global ulong *states, ulong Thre
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	uint4 b_x;
-		
+
 	// do not use early return here
 	if(gIdx < Threads)
 	{
 		states += 25 * gIdx;
 #if(STRIDED_INDEX==0)
 		Scratchpad += gIdx * (ITERATIONS >> 2);
-#else
+#elif(STRIDED_INDEX==1)
 		Scratchpad += gIdx;
+#elif(STRIDED_INDEX==2)
+		Scratchpad += get_group_id(0) * (ITERATIONS >> 2) * WORKSIZE + MEM_CHUNK * get_local_id(0);
 #endif
 
 		a[0] = states[0] ^ states[4];
@@ -578,11 +593,11 @@ __attribute__((reqd_work_group_size(WORKSIZE, 8, 1)))
 __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global uint *Branch0, __global uint *Branch1, __global uint *Branch2, __global uint *Branch3, ulong Threads)
 {
 	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
-	uint ExpandedKey2[256];
+	uint ExpandedKey2[40];
 	ulong State[25];
 	uint4 text;
 	
-	const ulong gIdx = get_global_id(0) - get_global_offset(0);
+	const ulong gIdx = getIdx();
 
 	for(int i = get_local_id(1) * WORKSIZE + get_local_id(0);
 		i < 256;
@@ -603,8 +618,10 @@ __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global u
 		states += 25 * gIdx;
 #if(STRIDED_INDEX==0)
 		Scratchpad += gIdx * (ITERATIONS >> 2);
-#else
+#elif(STRIDED_INDEX==1)
 		Scratchpad += gIdx;
+#elif(STRIDED_INDEX==2)
+		Scratchpad += get_group_id(0) * (ITERATIONS >> 2) * WORKSIZE + MEM_CHUNK * get_local_id(0);
 #endif
 
 		#if defined(__Tahiti__) || defined(__Pitcairn__)
@@ -632,7 +649,7 @@ __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global u
 		{
 			text ^= Scratchpad[IDX((i << 3) + get_local_id(1))];
 
-			#pragma unroll
+			#pragma unroll 10
 			for(int j = 0; j < 10; ++j)
 				text = AES_Round(AES0, AES1, AES2, AES3, text, ((uint4 *)ExpandedKey2)[j]);
 		}

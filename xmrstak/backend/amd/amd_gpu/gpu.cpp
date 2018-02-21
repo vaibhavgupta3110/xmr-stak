@@ -332,8 +332,8 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 
 	char options[256];
 	snprintf(options, sizeof(options), 
-		"-DITERATIONS=%d -DMASK=%d -DWORKSIZE=%llu -DSTRIDED_INDEX=%d", 
-		hasIterations, threadMemMask, int_port(ctx->workSize), ctx->stridedIndex ? 1 : 0);
+		"-DITERATIONS=%d -DMASK=%d -DWORKSIZE=%llu -DSTRIDED_INDEX=%d -DMEM_CHUNK=%d",
+		hasIterations, threadMemMask, int_port(ctx->workSize), ctx->stridedIndex, int(1u<<ctx->memChunk));
 	ret = clBuildProgram(ctx->Program, 1, &ctx->DeviceID, options, NULL, NULL);
 	if(ret != CL_SUCCESS)
 	{
@@ -518,13 +518,13 @@ std::vector<GpuContext> getAMDDevices(int index)
 				printer::inst()->print_msg(L1,"WARNING: %s when calling clGetDeviceInfo to get CL_DEVICE_NAME for device %u.", err_to_str(clStatus), k);
 				continue;
 			}
-			printer::inst()->print_msg(L0,"Found OpenCL GPU %s.",ctx.name.c_str());
 
 			// if environment variable GPU_SINGLE_ALLOC_PERCENT is not set we can not allocate the full memory
 			ctx.deviceIdx = k;
 			ctx.freeMem = std::min(ctx.freeMem, maxMem);
 			ctx.name = std::string(devNameVec.data());
 			ctx.DeviceID = device_list[k];
+			printer::inst()->print_msg(L0,"Found OpenCL GPU %s.",ctx.name.c_str());
 			ctxVec.push_back(ctx);
 		}
 	}
@@ -696,6 +696,13 @@ size_t InitOpenCL(GpuContext* ctx, size_t num_gpus, size_t platform_idx)
 
 	for(int i = 0; i < num_gpus; ++i)
 	{
+		if(ctx[i].stridedIndex == 2 && (ctx[i].rawIntensity % ctx[i].workSize) != 0)
+		{
+			size_t reduced_intensity = (ctx[i].rawIntensity / ctx[i].workSize) * ctx[i].workSize;
+			ctx[i].rawIntensity = reduced_intensity;
+			printer::inst()->print_msg(L0, "WARNING AMD: gpu %d intensity is not a multiple of 'worksize', auto reduce intensity to %d", ctx[i].deviceIdx, int(reduced_intensity));
+		}
+
 		if((ret = InitOpenCLGpu(opencl_ctx, &ctx[i], source_code.c_str())) != ERR_SUCCESS)
 		{
 			return ret;
