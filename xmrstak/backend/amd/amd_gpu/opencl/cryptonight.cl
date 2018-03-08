@@ -14,6 +14,11 @@ R"===(
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
 
+/* For Mesa clover support */
+#ifdef cl_clang_storage_class_specifiers
+#	pragma OPENCL EXTENSION cl_clang_storage_class_specifiers : enable
+#endif
+
 #ifdef cl_amd_media_ops
 #pragma OPENCL EXTENSION cl_amd_media_ops : enable
 #else
@@ -411,7 +416,7 @@ void AESExpandKey256(uint *keybuf)
 	}
 }
 
-#define MEM_CHUNK (1<<4)
+#define MEM_CHUNK (1<<MEM_CHUNK_EXPONENT)
 
 #if(STRIDED_INDEX==0)
 #   define IDX(x)	(x)
@@ -451,8 +456,10 @@ __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ul
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 		
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		states += 25 * gIdx;
 
@@ -483,9 +490,10 @@ __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ul
 	}
 
 	mem_fence(CLK_GLOBAL_MEM_FENCE);
-
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		#pragma unroll
 		for(int i = 0; i < 25; ++i) states[i] = State[i];
@@ -499,9 +507,10 @@ __kernel void cn0(__global ulong *input, __global uint4 *Scratchpad, __global ul
 	}
 
 	mem_fence(CLK_LOCAL_MEM_FENCE);
-
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		#pragma unroll 2
 		for(int i = 0; i < (ITERATIONS >> 5); ++i)
@@ -536,9 +545,10 @@ __kernel void cn1(__global uint4 *Scratchpad, __global ulong *states, ulong Thre
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	uint4 b_x;
-
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		states += 25 * gIdx;
 #if(STRIDED_INDEX==0)
@@ -559,8 +569,10 @@ __kernel void cn1(__global uint4 *Scratchpad, __global ulong *states, ulong Thre
 
 	mem_fence(CLK_LOCAL_MEM_FENCE);
 
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		#pragma unroll 8
 		for(int i = 0; i < ITERATIONS; ++i)
@@ -612,8 +624,10 @@ __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global u
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		states += 25 * gIdx;
 #if(STRIDED_INDEX==0)
@@ -641,8 +655,10 @@ __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global u
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		#pragma unroll 2
 		for(int i = 0; i < (ITERATIONS >> 5); ++i)
@@ -659,8 +675,10 @@ __kernel void cn2(__global uint4 *Scratchpad, __global ulong *states, __global u
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
+#if(COMP_MODE==1)
 	// do not use early return here
 	if(gIdx < Threads)
+#endif
 	{
 		if(!get_local_id(1))
 		{
