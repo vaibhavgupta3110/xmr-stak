@@ -50,8 +50,12 @@ struct params
 	std::string minerArg0;
 	std::string minerArgs;
 
+<<<<<<< HEAD
 	// block_version >= 0 enable benchmark
 	int benchmark_block_version = -1;
+=======
+	bool doBenchmarkOnly = false;
+>>>>>>> master
 
 	params() :
 		binaryName("xmr-stak"),

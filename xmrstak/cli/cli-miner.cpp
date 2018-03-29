@@ -92,6 +92,7 @@ void help()
 	cout<<" "<<endl;
 	cout<<"The following options can be used for automatic start without a guided config,"<<endl;
 	cout<<"If config exists then this pool will be top priority."<<endl;
+<<<<<<< HEAD
 	cout<<"  -o, --url URL              pool url and port, e.g. pool.usxmrpool.com:3333"<<endl;
 	cout<<"  -O, --tls-url URL          TLS pool url and port, e.g. pool.usxmrpool.com:10443"<<endl;
 	cout<<"  -u, --user USERNAME        pool user name or wallet address"<<endl;
@@ -100,6 +101,16 @@ void help()
 	cout<<"  --use-nicehash             the pool should run in nicehash mode"<<endl;
 	cout<<"  --currency NAME            currency to mine"<<endl;
 	cout<< endl;
+=======
+	cout<<"  -o, --url URL         pool url and port, e.g. pool.usxmrpool.com:3333"<<endl;
+	cout<<"  -O, --tls-url URL     TLS pool url and port, e.g. pool.usxmrpool.com:10443"<<endl;
+	cout<<"  -u, --user USERNAME   pool user name or wallet address"<<endl;
+	cout<<"  -r, --rigid RIGID     rig identifier for pool-side statistics (needs pool support)"<<endl;
+	cout<<"  -p, --pass PASSWD     pool password, in the most cases x or empty \"\""<<endl;
+	cout<<"  --use-nicehash        the pool should run in nicehash mode"<<endl;
+	cout<<"  --do-benchmark        ONLY do a 60-second benchmark and exit"<<endl;
+	cout<<" \n"<<endl;
+>>>>>>> master
 #ifdef _WIN32
 	cout<<"Environment variables:\n"<<endl;
 	cout<<"  XMRSTAK_NOWAIT             disable the dialog `Press any key to exit."<<std::endl;
@@ -635,6 +646,7 @@ int main(int argc, char *argv[])
 		{
 			params::inst().allowUAC = false;
 		}
+<<<<<<< HEAD
 		else if(opName.compare("--benchmark") == 0)
 		{
 			++i;
@@ -653,6 +665,11 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			params::inst().benchmark_block_version = bversion;
+=======
+		else if(opName.compare("--do-benchmark") == 0)
+		{
+			params::inst().doBenchmarkOnly = true;
+>>>>>>> master
 		}
 		else
 		{
@@ -729,10 +746,18 @@ int main(int argc, char *argv[])
 	printer::inst()->print_str("-------------------------------------------------------------------\n");
 	printer::inst()->print_msg(L0, "Mining coin: %s", jconf::inst()->GetMiningCoin().c_str());
 
+<<<<<<< HEAD
 	if(params::inst().benchmark_block_version >= 0)
 	{
 		printer::inst()->print_str("!!!! Doing only a benchmark and exiting. To mine, remove the '--benchmark' option. !!!!\n");
 		return do_benchmark(params::inst().benchmark_block_version);
+=======
+	if(params::inst().doBenchmarkOnly)
+	{
+		printer::inst()->print_str("!!!! Doing only a benchmark and exiting. To mine, remove the --do-benchmark option. !!!!\n");
+		do_benchmark();
+		return 0;
+>>>>>>> master
 	}
 	
 	executor::inst()->ex_start(jconf::inst()->DaemonMode());
